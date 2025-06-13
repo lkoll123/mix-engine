@@ -1,0 +1,1 @@
+Mix-engine is a generative AI system that learns to create smooth, beat-matched, and harmonically compatible transitions between two songs. It combines DSP, deep learning, and music theory to generate DJ-style crossfades and blend points.
