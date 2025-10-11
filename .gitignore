@@ -1,0 +1,9 @@
+# Python virtual environment
+venv/
+.env/
+
+# macOS and Python junk
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
