@@ -4,8 +4,6 @@ import soundfile as sf
 import numpy as np
 
 
-
-
 class d_Song:
 
     def __init__(self, file_path):
@@ -25,14 +23,11 @@ class d_Song:
 
         self.__outro_sec = None
         self.__intro_sec = None
-    
-
 
         if file_path is not None:
             self.load(file_path)
 
-
-    def load(self, file_path = None):
+    def load(self, file_path=None):
         """
         Load a song into the object and store metadata about this object
         """
@@ -68,13 +63,12 @@ class d_Song:
         """
         if self.__y is None or self.__sr is None:
             self.load()
-        
+
         if timeBounds is None:
             if self.__tempo is not None:
                 return self.__tempo
             tempo, _ = librosa.beat.beat_track(y=self.__y, sr=self.__sr)
             self.__tempo = float(tempo)
-            
 
         if not (hasattr(timeBounds, "__len__") and len(timeBounds) == 2):
             raise ValueError("timeBounds must be a 2-element [start_sec, end_sec]")
@@ -86,11 +80,11 @@ class d_Song:
         # Clamp to track duration
         total_dur = float(librosa.get_duration(y=self.__y, sr=self.__sr))
         start = max(0.0, min(start, total_dur))
-        end   = max(0.0, min(end,   total_dur))
+        end = max(0.0, min(end, total_dur))
 
         # Convert to samples and slice
         s0 = int(round(start * self.__sr))
-        s1 = int(round(end   * self.__sr))
+        s1 = int(round(end * self.__sr))
         y_seg = self.__y[s0:s1]
 
         # Quick sanity: need at least ~0.5s for reliable detection
@@ -99,7 +93,7 @@ class d_Song:
 
         tempo, _ = librosa.beat.beat_track(y=y_seg, sr=self.__sr)
         return float(tempo)
-    
+
     def get_chroma(self, timeBounds=None):
         """
         Retrieves HPCP vector from audio data
@@ -120,10 +114,10 @@ class d_Song:
 
             total_dur = float(librosa.get_duration(y=self.__y, sr=self.__sr))
             start = max(0.0, min(start, total_dur))
-            end   = max(0.0, min(end,   total_dur))
+            end = max(0.0, min(end, total_dur))
 
             s0 = int(round(start * self.__sr))
-            s1 = int(round(end   * self.__sr))
+            s1 = int(round(end * self.__sr))
             y_seg = self.__y[s0:s1]
 
         # Need enough samples to form a few CQT frames
@@ -131,7 +125,9 @@ class d_Song:
             raise ValueError("Selected window too short for reliable tempo estimation.")
 
         # HPCP-like chroma using constant-Q chromagram (12 pitch classes)
-        chroma = librosa.feature.chroma_cqt(y=y_seg, sr=self.__sr)  # shape: (12, T_frames)
+        chroma = librosa.feature.chroma_cqt(
+            y=y_seg, sr=self.__sr
+        )  # shape: (12, T_frames)
 
         # Mean over time → 12-D vector
         h = chroma.mean(axis=1).astype(float)
@@ -144,7 +140,7 @@ class d_Song:
             h = np.zeros(12, dtype=float)
 
         return h
-    
+
     def get_mel(self, timeBounds=None, n_bands=5):
         """
         Retrieves mel bands from audio data
@@ -166,27 +162,29 @@ class d_Song:
 
             total_dur = float(librosa.get_duration(y=self.__y, sr=self.__sr))
             start = max(0.0, min(start, total_dur))
-            end   = max(0.0, min(end,   total_dur))
+            end = max(0.0, min(end, total_dur))
 
             s0 = int(round(start * self.__sr))
-            s1 = int(round(end   * self.__sr))
+            s1 = int(round(end * self.__sr))
             y_seg = self.__y[s0:s1]
 
         # Need enough samples to form a few CQT frames
         if y_seg.size < int(0.5 * self.__sr):
             raise ValueError("Selected window too short for reliable tempo estimation.")
-        
-        bands = librosa.feature.melspectrogram(y=y_seg, sr=self.__sr, n_mels=n_bands, power=2.0)
+
+        bands = librosa.feature.melspectrogram(
+            y=y_seg, sr=self.__sr, n_mels=n_bands, power=2.0
+        )
         dist = bands.mean(axis=1).astype(float)
 
         s = dist.sum()
 
-        if(s == 0):
+        if s == 0:
             return np.zeros(n_bands, dtype=float)
-        
+
         dist /= s
         return dist
-    
+
     def get_energy(self, timeBounds=None):
         """
         Retrieves energy reading from audio data
@@ -208,18 +206,18 @@ class d_Song:
 
             total_dur = float(librosa.get_duration(y=self.__y, sr=self.__sr))
             start = max(0.0, min(start, total_dur))
-            end   = max(0.0, min(end,   total_dur))
+            end = max(0.0, min(end, total_dur))
 
             s0 = int(round(start * self.__sr))
-            s1 = int(round(end   * self.__sr))
+            s1 = int(round(end * self.__sr))
             y_seg = self.__y[s0:s1]
 
         # Need enough samples to form a few CQT frames
         if y_seg.size < int(0.5 * self.__sr):
             raise ValueError("Selected window too short for reliable tempo estimation.")
-        
-        return float(np.sqrt(np.mean(y_seg ** 2)))
-    
+
+        return float(np.sqrt(np.mean(y_seg**2)))
+
     def get_onset_envelope(self, timeBounds=None, hop_length=512, percussive=True):
         """
         Retrieves onset envelope from audio data
@@ -241,25 +239,20 @@ class d_Song:
 
             total_dur = float(librosa.get_duration(y=self.__y, sr=self.__sr))
             start = max(0.0, min(start, total_dur))
-            end   = max(0.0, min(end,   total_dur))
+            end = max(0.0, min(end, total_dur))
 
             s0 = int(round(start * self.__sr))
-            s1 = int(round(end   * self.__sr))
+            s1 = int(round(end * self.__sr))
             y_seg = self.__y[s0:s1]
 
         if percussive:
             y_seg = librosa.effects.percussive(y_seg)
 
         env = librosa.onset.onset_strength(
-            y=y_seg, 
-            sr=self.__sr,
-            hop_length=hop_length,
-            aggregate = np.median
+            y=y_seg, sr=self.__sr, hop_length=hop_length, aggregate=np.median
         )
 
         return env.astype(float)
-
-
 
     def set_tempo(self, val):
         pass
@@ -282,7 +275,6 @@ class d_Song:
         """
         sf.write(output_path, self.__y, self.__sr)
 
-
     def compute_downbeats(self, meters=(3, 4, 5, 6, 7)):
         """
         Compute downbeats using beat tracking
@@ -292,8 +284,12 @@ class d_Song:
             self.load()
 
         # Onset envelope & beats
-        onset_env = librosa.onset.onset_strength(y=self.__y, sr=self.__sr, aggregate=np.median)
-        tempo, beat_frames = librosa.beat.beat_track(onset_envelope=onset_env, sr=self.__sr, trim=False, units='frames')
+        onset_env = librosa.onset.onset_strength(
+            y=self.__y, sr=self.__sr, aggregate=np.median
+        )
+        tempo, beat_frames = librosa.beat.beat_track(
+            onset_envelope=onset_env, sr=self.__sr, trim=False, units="frames"
+        )
 
         if beat_frames is None or len(beat_frames) == 0:
             # no beats detected – fall back to empty downbeats / duration windows later
@@ -332,15 +328,8 @@ class d_Song:
         downbeats = beat_times[down_idx]
         return downbeats, beat_times
 
-
-
-
-
-
-
-
-    def compute_windows(self, N = 8, fallback_sec = 30):
-        """ 
+    def compute_windows(self, N=8, fallback_sec=30):
+        """
         Compute mixing windows
 
         :param N: number of downbeats to include in the intro.outro sections
@@ -348,18 +337,18 @@ class d_Song:
 
         if self.__intro_sec is not None and self.__outro_sec is not None:
             return (self.__intro_sec, self.__outro_sec)
-        
+
         if self.__y is None or self.__sr is None:
             self.load()
 
         downBeats, _ = self.compute_downbeats()
 
-        if(len(downBeats) >= N):
+        if len(downBeats) >= N:
             self.__intro_sec = [downBeats[0], downBeats[N]]
-            self.__outro_sec = [downBeats[-(N+1)], downBeats[-1]]
-        else: 
+            self.__outro_sec = [downBeats[-(N + 1)], downBeats[-1]]
+        else:
 
-            dur = float(librosa.get_duration(y=self.__y, sr = self.__sr))
+            dur = float(librosa.get_duration(y=self.__y, sr=self.__sr))
             self.__intro_sec = [0, min(fallback_sec, dur)]
             self.__outro_sec = [max(0, dur - fallback_sec), dur]
 
