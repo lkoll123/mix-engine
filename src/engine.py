@@ -183,18 +183,18 @@ class MixEngine:
     def solve_tsp(self, wav_files: list[str]) -> tuple[list[str], float]:
         """
         Solve Traveling Salesman Problem to find optimal track ordering
-        
+
         :param wav_files: List of wav file paths
         :return: Tuple of (ordered file paths, total path cost)
         """
         if len(wav_files) < 2:
             return wav_files, 0.0
-        
+
         n = len(wav_files)
-        
+
         # Build cost matrix using pairwise similarity scores
         cost_matrix = np.zeros((n, n))
-        
+
         for i in range(n):
             for j in range(n):
                 if i != j:
@@ -202,31 +202,31 @@ class MixEngine:
                     similarity = self.get_similarity_det(wav_files[i], wav_files[j])
                     # Convert to cost (higher similarity = lower cost)
                     cost_matrix[i][j] = 1.0 - similarity
-        
+
         # Simple nearest neighbor TSP solution
         visited = [False] * n
         path = [0]  # Start with first song
         visited[0] = True
         total_cost = 0.0
-        
+
         current = 0
         for _ in range(n - 1):
-            min_cost = float('inf')
+            min_cost = float("inf")
             next_song = -1
-            
+
             # Find nearest unvisited song
             for j in range(n):
                 if not visited[j] and cost_matrix[current][j] < min_cost:
                     min_cost = cost_matrix[current][j]
                     next_song = j
-            
+
             if next_song != -1:
                 path.append(next_song)
                 visited[next_song] = True
                 total_cost += min_cost
                 current = next_song
-        
+
         # Convert indices back to file paths
         ordered_files = [wav_files[i] for i in path]
-        
+
         return ordered_files, total_cost
