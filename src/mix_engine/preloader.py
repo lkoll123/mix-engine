@@ -53,11 +53,11 @@ class d_Song:
             print(f"Error occurred: {err}")
             raise Exception("Error")
 
-    def get_pitch(self, type='intro'):
+    def get_pitch(self, type="intro"):
         """
         Retrieves pitch from audio data
         """
-        if(type == 'intro'):
+        if type == "intro":
             if self.__intro_pitch is not None:
                 return self.__intro_pitch
         else:
@@ -67,28 +67,26 @@ class d_Song:
         if self.__y is None or self.__sr is None:
             self.load()
 
-        if(type == 'intro'):
+        if type == "intro":
             self.__intro_pitch = librosa.core.piptrack(y=self.__y, sr=self.__sr)
             return self.__intro_pitch
         else:
             self.__outro_pitch = librosa.core.piptrack(y=self.__y, sr=self.__sr)
             return self.__outro_pitch
 
-    def get_tempo(self, timeBounds=None, type='intro'):
+    def get_tempo(self, timeBounds=None, type="intro"):
         """
         Retrieves tempo from audio data
         """
         if self.__y is None or self.__sr is None:
             self.load()
 
-        if(type=='intro'):
+        if type == "intro":
             if self.__intro_tempo is not None:
                 return self.__intro_tempo
         else:
             if self.__outro_tempo is not None:
                 return self.__outro_tempo
-
-
 
         if timeBounds is None:
             if self.__tempo is not None:
@@ -119,28 +117,26 @@ class d_Song:
 
         tempo, _ = librosa.beat.beat_track(y=y_seg, sr=self.__sr)
 
-        if(type=='intro'):
+        if type == "intro":
             self.__intro_tempo = float(tempo)
             return self.__intro_tempo
         else:
             self.__outro_tempo = float(tempo)
             return self.__outro_tempo
 
-    def get_chroma(self, timeBounds=None, type='intro'):
+    def get_chroma(self, timeBounds=None, type="intro"):
         """
         Retrieves HPCP vector from audio data
         """
         if self.__y is None or self.__sr is None:
             self.load()
-        
-        if(type=='intro'):
+
+        if type == "intro":
             if self.__intro_chroma is not None:
                 return self.__intro_chroma
         else:
             if self.__outro_chroma is not None:
                 return self.__outro_chroma
-        
-        
 
         # Select samples for full track or window
         if timeBounds is None:
@@ -180,15 +176,14 @@ class d_Song:
         else:
             h = np.zeros(12, dtype=float)
 
-        if(type=='intro'):
+        if type == "intro":
             self.__intro_chroma = h
             return self.__intro_chroma
         else:
             self.__outro_chroma = h
             return self.__outro_chroma
-    
 
-    def get_mel(self, timeBounds=None, n_bands=5, type='intro'):
+    def get_mel(self, timeBounds=None, n_bands=5, type="intro"):
         """
         Retrieves mel bands from audio data
         """
@@ -196,7 +191,7 @@ class d_Song:
         if self.__y is None or self.__sr is None:
             self.load()
 
-        if(type=='intro'):
+        if type == "intro":
             if self.__intro_mel is not None:
                 return self.__intro_mel
         else:
@@ -233,7 +228,7 @@ class d_Song:
 
         s = dist.sum()
 
-        if(type=='intro'):
+        if type == "intro":
             if s == 0:
                 self.__intro_mel = np.zeros(n_bands, dtype=float)
             else:
@@ -250,8 +245,7 @@ class d_Song:
 
             return self.__outro_mel
 
-
-    def get_energy(self, timeBounds=None, type='intro'):
+    def get_energy(self, timeBounds=None, type="intro"):
         """
         Retrieves energy reading from audio data
         """
@@ -259,7 +253,7 @@ class d_Song:
         if self.__y is None or self.__sr is None:
             self.load()
 
-        if(type=='intro'):
+        if type == "intro":
             if self.__intro_energy is not None:
                 return self.__intro_energy
         else:
@@ -288,17 +282,17 @@ class d_Song:
         # Need enough samples to form a few CQT frames
         if y_seg.size < int(0.5 * self.__sr):
             raise ValueError("Selected window too short for reliable tempo estimation.")
-        
 
-        if(type=='intro'):
+        if type == "intro":
             self.__intro_energy = float(np.sqrt(np.mean(y_seg**2)))
             return self.__intro_energy
         else:
             self.__outro_energy = float(np.sqrt(np.mean(y_seg**2)))
             return self.__outro_energy
-        
 
-    def get_onset_envelope(self, timeBounds=None, hop_length=512, percussive=True, type='intro'):
+    def get_onset_envelope(
+        self, timeBounds=None, hop_length=512, percussive=True, type="intro"
+    ):
         """
         Retrieves onset envelope from audio data
         """
@@ -306,7 +300,7 @@ class d_Song:
         if self.__y is None or self.__sr is None:
             self.load()
 
-        if(type=='intro'):
+        if type == "intro":
             if self.__intro_onset_envelope is not None:
                 return self.__intro_onset_envelope
         else:
@@ -339,13 +333,12 @@ class d_Song:
             y=y_seg, sr=self.__sr, hop_length=hop_length, aggregate=np.median
         )
 
-        if(type=='intro'):
+        if type == "intro":
             self.__intro_onset_envelope = env.astype(float)
             return self.__intro_onset_envelope
         else:
             self.__outro_onset_envelope = env.astype(float)
             return self.__outro_onset_envelope
-
 
     def set_tempo(self, val):
         pass

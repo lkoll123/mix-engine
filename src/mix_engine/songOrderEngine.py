@@ -1,5 +1,7 @@
 import math
+
 import numpy as np
+
 from .preloader import d_Song
 
 
@@ -125,28 +127,28 @@ class song_Order_Engine:
         song_2_intro, _ = d_song_2.compute_windows(use_fallback=True)
 
         # tempo alignment heuristic
-        song_1_bpm = d_song_1.get_tempo(timeBounds=song_1_outro, type='outro')
-        song_2_bpm = d_song_2.get_tempo(timeBounds=song_2_intro, type='intro')
+        song_1_bpm = d_song_1.get_tempo(timeBounds=song_1_outro, type="outro")
+        song_2_bpm = d_song_2.get_tempo(timeBounds=song_2_intro, type="intro")
         tempo_alignment = self.__comp_tempo_heuristic(song_1_bpm, song_2_bpm)
 
         # Tonality alignment heuristic
-        chroma_1 = d_song_1.get_chroma(timeBounds=song_1_outro, type='outro')
-        chroma_2 = d_song_2.get_chroma(timeBounds=song_2_intro, type='intro')
+        chroma_1 = d_song_1.get_chroma(timeBounds=song_1_outro, type="outro")
+        chroma_2 = d_song_2.get_chroma(timeBounds=song_2_intro, type="intro")
         tone_alignment = self.__comp_tone_alignment(chroma_1, chroma_2)
 
         # energy continuuity heuristic
-        energy_1 = d_song_1.get_energy(timeBounds=song_1_outro, type='outro')
-        energy_2 = d_song_2.get_energy(timeBounds=song_2_intro, type='intro')
+        energy_1 = d_song_1.get_energy(timeBounds=song_1_outro, type="outro")
+        energy_2 = d_song_2.get_energy(timeBounds=song_2_intro, type="intro")
         energy_continuity = self.__comp_energy_continuity(energy_1, energy_2)
 
         # spectral fit heuristic
-        mel_1 = d_song_1.get_mel(timeBounds=song_1_outro, type='outro')
-        mel_2 = d_song_2.get_mel(timeBounds=song_2_intro, type='intro')
+        mel_1 = d_song_1.get_mel(timeBounds=song_1_outro, type="outro")
+        mel_2 = d_song_2.get_mel(timeBounds=song_2_intro, type="intro")
         spectral_fit = self.__comp_spectral_heuristic(mel_1, mel_2)
 
         # beat alignment heuristic
-        env_1 = d_song_1.get_onset_envelope(timeBounds=song_1_outro, type='outro')
-        env_2 = d_song_2.get_onset_envelope(timeBounds=song_2_intro, type='intro')
+        env_1 = d_song_1.get_onset_envelope(timeBounds=song_1_outro, type="outro")
+        env_2 = d_song_2.get_onset_envelope(timeBounds=song_2_intro, type="intro")
         beat_alignment = self.__comp_beat_alignment(env_1, env_2)
 
         w_t = weights[0]
@@ -174,27 +176,26 @@ class song_Order_Engine:
         # TODO: Embedding based "mixability" heuristic
 
         return 0.0
-    
 
     def __precompute(self, song: d_Song):
         """
         Pre-compute all frequently used frequency measurements; measurements will be cached by d_Song object
         """
         intro, outro = song.compute_windows(use_fallback=True)
-        song.get_tempo(timeBounds=intro, type='intro')
-        song.get_tempo(timeBounds=outro, type='outro')
+        song.get_tempo(timeBounds=intro, type="intro")
+        song.get_tempo(timeBounds=outro, type="outro")
 
-        song.get_chroma(timeBounds=intro, type='intro')
-        song.get_chroma(timeBounds=outro, type='outro')
+        song.get_chroma(timeBounds=intro, type="intro")
+        song.get_chroma(timeBounds=outro, type="outro")
 
-        song.get_energy(timeBounds=intro, type='intro')
-        song.get_energy(timeBounds=outro, type='outro')
+        song.get_energy(timeBounds=intro, type="intro")
+        song.get_energy(timeBounds=outro, type="outro")
 
-        song.get_mel(timeBounds=intro, type='intro')
-        song.get_mel(timeBounds=outro, type='outro')
+        song.get_mel(timeBounds=intro, type="intro")
+        song.get_mel(timeBounds=outro, type="outro")
 
-        song.get_onset_envelope(timeBounds=intro, type='intro')
-        song.get_onset_envelope(timeBounds=outro, type='outro')
+        song.get_onset_envelope(timeBounds=intro, type="intro")
+        song.get_onset_envelope(timeBounds=outro, type="outro")
 
     def solve_tsp(self, wav_files: list[str]) -> tuple[list[str], float]:
         """
@@ -211,11 +212,11 @@ class song_Order_Engine:
             try:
                 curr = d_Song(file)
                 self.__precompute(curr)
-                object_Map[file] = curr 
+                object_Map[file] = curr
 
-                print(f'Successfully pre-loaded song: {file}')
+                print(f"Successfully pre-loaded song: {file}")
             except:
-                print(f'Wav Load Failure: {file}')
+                print(f"Wav Load Failure: {file}")
 
         wav_files = list(object_Map.keys())
         n = len(wav_files)
@@ -227,7 +228,9 @@ class song_Order_Engine:
             for j in range(n):
                 if i != j:
                     # Get similarity score (higher = more mixable)
-                    similarity = self.get_similarity_det(object_Map[wav_files[i]], object_Map[wav_files[j]])
+                    similarity = self.get_similarity_det(
+                        object_Map[wav_files[i]], object_Map[wav_files[j]]
+                    )
                     # Convert to cost (higher similarity = lower cost)
                     cost_matrix[i][j] = 1.0 - similarity
 
