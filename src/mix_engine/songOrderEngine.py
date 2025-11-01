@@ -123,8 +123,8 @@ class song_Order_Engine:
         :param weights: optional parameter specifying weightings of similarity metric components
         """
 
-        _, song_1_outro = d_song_1.compute_windows(use_fallback=True)
-        song_2_intro, _ = d_song_2.compute_windows(use_fallback=True)
+        _, song_1_outro = d_song_1.compute_windows(use_fallback=False)
+        song_2_intro, _ = d_song_2.compute_windows(use_fallback=False)
 
         # tempo alignment heuristic
         song_1_bpm = d_song_1.get_tempo(timeBounds=song_1_outro, type="outro")
@@ -181,7 +181,7 @@ class song_Order_Engine:
         """
         Pre-compute all frequently used frequency measurements; measurements will be cached by d_Song object
         """
-        intro, outro = song.compute_windows(use_fallback=True)
+        intro, outro = song.compute_windows(use_fallback=False)
         song.get_tempo(timeBounds=intro, type="intro")
         song.get_tempo(timeBounds=outro, type="outro")
 
@@ -197,7 +197,7 @@ class song_Order_Engine:
         song.get_onset_envelope(timeBounds=intro, type="intro")
         song.get_onset_envelope(timeBounds=outro, type="outro")
 
-    def solve_tsp(self, wav_files: list[str]) -> tuple[list[str], float]:
+    def solve_tsp(self, wav_files: list[str]) -> tuple[dict, float]:
         """
         Solve Traveling Salesman Problem to find optimal track ordering
 
@@ -213,8 +213,6 @@ class song_Order_Engine:
                 curr = d_Song(file)
                 self.__precompute(curr)
                 object_Map[file] = curr
-
-                print(f"Successfully pre-loaded song: {file}")
             except:
                 print(f"Wav Load Failure: {file}")
 
@@ -258,6 +256,9 @@ class song_Order_Engine:
                 current = next_song
 
         # Convert indices back to file paths
-        ordered_files = [wav_files[i] for i in path]
+        ordered_files = {
+            "path": [wav_files[i] for i in path],
+            "d_Song": [object_Map[wav_files[i]] for i in path],
+        }
 
         return ordered_files, total_cost
