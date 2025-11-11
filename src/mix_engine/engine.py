@@ -51,7 +51,7 @@ class mix_Engine:
 
         res = {}
 
-        # song_b.set_tempo(tempo_ratio)
+        song_b.set_tempo(tempo_ratio)
         # song_b.set_pitch(semitone_diff)
 
         res["tempo_ratio"] = tempo_ratio
