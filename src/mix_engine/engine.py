@@ -14,7 +14,17 @@ class mix_Engine:
     def mix_playlist(self, playlist: list[d_Song], curves):
         seams = []
         for i in range(len(playlist) - 1):
-            seam = self.mix_songs(playlist[i], playlist[i + 1], curves)
+            entry_song = playlist[i]
+            outro_song = playlist[i+1]
+
+            #TODO: calculate current pitch and tempo
+            curr_pitch = None
+            curr_tempo = None
+
+            seam = self.mix_songs(entry_song, outro_song, curves)
+
+            #TODO: revert song to original pitch and tempo
+            self.blend_back(curr_pitch, curr_tempo, seam["window_b"][1], outro_song)
             seams.append(seam)
         return seams
 
@@ -52,7 +62,7 @@ class mix_Engine:
         res = {}
 
         song_b.set_tempo(tempo_ratio)
-        # song_b.set_pitch(semitone_diff)
+        song_b.set_pitch(semitone_diff)
 
         res["tempo_ratio"] = tempo_ratio
         res["semitone_diff"] = semitone_diff
@@ -146,3 +156,10 @@ class mix_Engine:
         res["window_a"] = song_a_outro
         res["window_b"] = song_b_intro
         return res
+    
+
+    def blend_back(self, old_tempo, old_pitch, time_stamp, song, window = 10):
+        #TODO: revert song to original pitch, and original tempo
+
+        return
+
