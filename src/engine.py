@@ -1,4 +1,5 @@
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 
@@ -69,6 +70,7 @@ class MixEngine:
         if diff < 0:
             return 0.0
         return diff
+
 
     def __comp_beat_alignment(self, env_1: np.ndarray, env_2: np.ndarray) -> float:
         """
@@ -180,11 +182,15 @@ class MixEngine:
 
         return 0.0
 
-    def solve_tsp(self, wav_files: list[str]) -> tuple[list[str], float]:
+    def solve_tsp(
+        self, wav_files: list[str], n_workers: int = None, use_2opt: bool = True
+    ) -> tuple[list[str], float]:
         """
         Solve Traveling Salesman Problem to find optimal track ordering
 
         :param wav_files: List of wav file paths
+        :param n_workers: Number of parallel workers for TSP solving. If None, uses default. Set to 1 to disable parallelization.
+        :param use_2opt: If True, apply 2-opt improvement to the initial solution
         :return: Tuple of (ordered file paths, total path cost)
         """
         if len(wav_files) < 2:
@@ -192,18 +198,40 @@ class MixEngine:
 
         n = len(wav_files)
 
-        # Build cost matrix using pairwise similarity scores
+        # Build cost matrix using pairwise similarity scores (sequential)
         cost_matrix = np.zeros((n, n))
+        weights = [0.26, 0.33, 0.23, 0.08, 0.1]
 
         for i in range(n):
             for j in range(n):
                 if i != j:
-                    # Get similarity score (higher = more mixable)
-                    similarity = self.get_similarity_det(wav_files[i], wav_files[j])
-                    # Convert to cost (higher similarity = lower cost)
+                    similarity = self.get_similarity_det(wav_files[i], wav_files[j], weights)
                     cost_matrix[i][j] = 1.0 - similarity
 
-        # Simple nearest neighbor TSP solution
+        # Solve TSP with parallelization
+        if n_workers != 1 and n > 3:
+            path, total_cost = self._solve_tsp_parallel(cost_matrix, use_2opt, n_workers)
+        else:
+            # Sequential TSP solution
+            path, total_cost = self._solve_tsp_nearest_neighbor(cost_matrix)
+            if use_2opt and n > 3:
+                path, total_cost = self._two_opt_improve(path, cost_matrix)
+
+        # Convert indices back to file paths
+        ordered_files = [wav_files[i] for i in path]
+
+        return ordered_files, total_cost
+
+    def _solve_tsp_nearest_neighbor(
+        self, cost_matrix: np.ndarray
+    ) -> tuple[list[int], float]:
+        """
+        Solve TSP using nearest neighbor heuristic
+        
+        :param cost_matrix: Cost matrix
+        :return: Tuple of (path, total_cost)
+        """
+        n = len(cost_matrix)
         visited = [False] * n
         path = [0]  # Start with first song
         visited[0] = True
@@ -226,7 +254,114 @@ class MixEngine:
                 total_cost += min_cost
                 current = next_song
 
-        # Convert indices back to file paths
-        ordered_files = [wav_files[i] for i in path]
+        return path, total_cost
 
-        return ordered_files, total_cost
+    def _solve_tsp_parallel(
+        self, cost_matrix: np.ndarray, use_2opt: bool, n_workers: int
+    ) -> tuple[list[int], float]:
+        """
+        Solve TSP in parallel by trying multiple starting points
+        
+        :param cost_matrix: Cost matrix
+        :param use_2opt: Whether to apply 2-opt improvement
+        :param n_workers: Number of parallel workers
+        :return: Tuple of (best_path, best_cost)
+        """
+        n = len(cost_matrix)
+        
+        def solve_from_start(start_idx: int) -> tuple[list[int], float]:
+            """Solve TSP starting from a given index"""
+            visited = [False] * n
+            path = [start_idx]
+            visited[start_idx] = True
+            total_cost = 0.0
+            current = start_idx
+
+            for _ in range(n - 1):
+                min_cost = float("inf")
+                next_song = -1
+
+                for j in range(n):
+                    if not visited[j] and cost_matrix[current][j] < min_cost:
+                        min_cost = cost_matrix[current][j]
+                        next_song = j
+
+                if next_song != -1:
+                    path.append(next_song)
+                    visited[next_song] = True
+                    total_cost += min_cost
+                    current = next_song
+
+            # Apply 2-opt if requested
+            if use_2opt:
+                path, total_cost = self._two_opt_improve(path, cost_matrix)
+
+            return path, total_cost
+
+        # Try multiple starting points in parallel
+        num_starts = min(n, n_workers or n)
+        start_indices = list(range(num_starts))
+
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = {
+                executor.submit(solve_from_start, start_idx): start_idx
+                for start_idx in start_indices
+            }
+
+            best_path = None
+            best_cost = float("inf")
+
+            for future in as_completed(futures):
+                try:
+                    path, cost = future.result()
+                    if cost < best_cost:
+                        best_path = path
+                        best_cost = cost
+                except Exception as e:
+                    start_idx = futures[future]
+                    print(f"Error solving TSP from start {start_idx}: {e}")
+
+        if best_path is None:
+            # Fallback to sequential
+            return self._solve_tsp_nearest_neighbor(cost_matrix)
+
+        return best_path, best_cost
+
+    def _two_opt_improve(
+        self, path: list[int], cost_matrix: np.ndarray
+    ) -> tuple[list[int], float]:
+        """
+        Apply 2-opt improvement to TSP path
+        
+        :param path: Initial path (list of indices)
+        :param cost_matrix: Cost matrix
+        :return: Improved path and total cost
+        """
+        n = len(path)
+        best_path = path[:]
+        best_cost = sum(
+            cost_matrix[best_path[i]][best_path[i + 1]] for i in range(n - 1)
+        )
+        improved = True
+
+        while improved:
+            improved = False
+            for i in range(1, n - 1):
+                for j in range(i + 1, n):
+                    # Try reversing segment between i and j
+                    new_path = (
+                        best_path[:i]
+                        + best_path[i : j + 1][::-1]
+                        + best_path[j + 1 :]
+                    )
+                    new_cost = sum(
+                        cost_matrix[new_path[k]][new_path[k + 1]]
+                        for k in range(len(new_path) - 1)
+                    )
+
+                    if new_cost < best_cost:
+                        best_path = new_path
+                        best_cost = new_cost
+                        improved = True
+
+        return best_path, best_cost
