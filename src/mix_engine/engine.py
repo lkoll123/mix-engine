@@ -183,11 +183,11 @@ class mix_Engine:
 
         y_rest = old_song.get_Y()
 
-        if len(y_rest) < len(y):
-            pad = np.zeros(len(y) - len(y_rest))
-            y_rest = np.concatenate([y_rest, pad])
-        elif len(y_rest) > len(y):
-            y_rest = y_rest[:len(y)]
+        if len(y) < len(y_rest):
+            pad = np.zeros(len(y_rest) - len(y))
+            y = np.concatenate([y, pad])
+        elif len(y) > len(y_rest):
+            y = y[:len(y_rest)]
 
         # Fade the current and the old songs
         fade_len = end_i - start_i
