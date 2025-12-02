@@ -2,6 +2,7 @@ import math
 
 import librosa
 import numpy as np
+import pyrubberband as rubberband
 
 from .preloader import d_Song
 
@@ -17,14 +18,13 @@ class mix_Engine:
             entry_song = playlist[i]
             outro_song = playlist[i+1]
 
-            #TODO: calculate current pitch and tempo
-            curr_pitch = None
-            curr_tempo = None
+            # Make a clone of the OG song
+            temp = outro_song.clone()
 
             seam = self.mix_songs(entry_song, outro_song, curves)
 
-            #TODO: revert song to original pitch and tempo
-            self.blend_back(curr_pitch, curr_tempo, seam["window_b"][1], outro_song)
+            # Revert song to original pitch and tempo
+            self.blend_back(temp, seam["window_b"][1], outro_song)
             seams.append(seam)
         return seams
 
@@ -158,8 +158,40 @@ class mix_Engine:
         return res
     
 
-    def blend_back(self, old_tempo, old_pitch, time_stamp, song, window = 10):
-        #TODO: revert song to original pitch, and original tempo
+    def blend_back(self, old_song, time_stamp, song, window = 2.0, transition_length = 5.0):
+        
+        y = song.get_Y()
+        sr = song.get_sr()
 
-        return
+        if y is None or sr is None:
+            return
 
+        N = len(y)
+        total_duration = N / sr
+
+        start_t = time_stamp+window
+        end_t = start_t+transition_length
+
+        if start_t >= total_duration:
+            return
+
+        end_t = min(end_t, total_duration)
+
+        # Convert start blend and end blend to indices
+        start_i = int(start_t * sr)
+        end_i = int(end_t * sr)
+
+        y_rest = old_song.get_Y()
+
+        # Fade the current and the old songs
+        fade_len = end_i - start_i
+        if fade_len > 0:
+            alpha = np.linspace(0.0, 1.0, fade_len)
+            y[start_i:end_i] = (1 - alpha) * y[start_i:end_i] + alpha * y_rest[start_i:end_i]
+            y[end_i:] = y_rest[end_i:]
+        else:
+            y[start_i:] = y_rest[start_i:]
+
+        song._d_Song__y = y
+
+        return song
