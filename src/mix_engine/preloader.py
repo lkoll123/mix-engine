@@ -57,11 +57,79 @@ class d_Song:
             print(f"Error occurred: {err}")
             raise Exception("Error")
 
+    def clone(self):
+        """
+        Deep copy of the d_Song instance.
+        Audio buffer (__y) is duplicated.
+        All metadata fields are copied.
+        No shared mutable state remains.
+        """
+
+        new = d_Song.__new__(d_Song)  # allocate without __init__
+
+        # Copy simple attributes
+        new.__file_path = self.__file_path
+        new.__file = self.__file
+
+        new.__tempo = self.__tempo
+        new.__pitch = self.__pitch
+        new.__chroma = None if self.__chroma is None else np.copy(self.__chroma)
+        new.__energy = None if self.__energy is None else np.copy(self.__energy)
+        new.__mel = None if self.__mel is None else np.copy(self.__mel)
+        new.__onset_envelope = (
+            None if self.__onset_envelope is None else np.copy(self.__onset_envelope)
+        )
+
+        new.__intro_tempo = self.__intro_tempo
+        new.__intro_chroma = (
+            None if self.__intro_chroma is None else np.copy(self.__intro_chroma)
+        )
+        new.__intro_energy = (
+            None if self.__intro_energy is None else np.copy(self.__intro_energy)
+        )
+        new.__intro_mel = (
+            None if self.__intro_mel is None else np.copy(self.__intro_mel)
+        )
+        new.__intro_onset_envelope = (
+            None
+            if self.__intro_onset_envelope is None
+            else np.copy(self.__intro_onset_envelope)
+        )
+
+        new.__outro_tempo = self.__outro_tempo
+        new.__outro_chroma = (
+            None if self.__outro_chroma is None else np.copy(self.__outro_chroma)
+        )
+        new.__outro_energy = (
+            None if self.__outro_energy is None else np.copy(self.__outro_energy)
+        )
+        new.__outro_mel = (
+            None if self.__outro_mel is None else np.copy(self.__outro_mel)
+        )
+        new.__outro_onset_envelope = (
+            None
+            if self.__outro_onset_envelope is None
+            else np.copy(self.__outro_onset_envelope)
+        )
+
+        # Deep copy audio
+        new.__y = None if self.__y is None else np.copy(self.__y)
+        new.__sr = self.__sr
+        new.duration = self.duration
+
+        new.__outro_sec = self.__outro_sec
+        new.__intro_sec = self.__intro_sec
+
+        return new
+
     def get_sr(self):
         if self.__y is None or self.__sr is None:
             self.load()
 
         return self.__sr
+
+    def get_Y(self):
+        return self.__y
 
     def get_pitch(self):
         """
@@ -466,11 +534,14 @@ class d_Song:
 
         total_dur = float(librosa.get_duration(y=self.__y, sr=self.__sr))
 
-        # ensure numeric + order
         start = float(l_Bound)
-        end = float(r_Bound)
-        if end < start:
-            start, end = end, start
+        if r_Bound == None:
+            end = total_dur
+        else:
+            # ensure numeric + order
+            end = float(r_Bound)
+            if end < start:
+                start, end = end, start
 
         # clamp
         start = max(0.0, min(start, total_dur))
