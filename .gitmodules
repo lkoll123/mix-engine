@@ -1,0 +1,3 @@
+[submodule "external/DJtransGAN"]
+	path = external/DJtransGAN
+	url = https://github.com/ChenPaulYu/DJtransGAN.git
