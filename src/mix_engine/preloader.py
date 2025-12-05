@@ -65,7 +65,7 @@ class d_Song:
         No shared mutable state remains.
         """
 
-        new = d_Song.__new__(d_Song)   # allocate without __init__
+        new = d_Song.__new__(d_Song)  # allocate without __init__
 
         # Copy simple attributes
         new.__file_path = self.__file_path
@@ -76,19 +76,41 @@ class d_Song:
         new.__chroma = None if self.__chroma is None else np.copy(self.__chroma)
         new.__energy = None if self.__energy is None else np.copy(self.__energy)
         new.__mel = None if self.__mel is None else np.copy(self.__mel)
-        new.__onset_envelope = None if self.__onset_envelope is None else np.copy(self.__onset_envelope)
+        new.__onset_envelope = (
+            None if self.__onset_envelope is None else np.copy(self.__onset_envelope)
+        )
 
         new.__intro_tempo = self.__intro_tempo
-        new.__intro_chroma = None if self.__intro_chroma is None else np.copy(self.__intro_chroma)
-        new.__intro_energy = None if self.__intro_energy is None else np.copy(self.__intro_energy)
-        new.__intro_mel = None if self.__intro_mel is None else np.copy(self.__intro_mel)
-        new.__intro_onset_envelope = None if self.__intro_onset_envelope is None else np.copy(self.__intro_onset_envelope)
+        new.__intro_chroma = (
+            None if self.__intro_chroma is None else np.copy(self.__intro_chroma)
+        )
+        new.__intro_energy = (
+            None if self.__intro_energy is None else np.copy(self.__intro_energy)
+        )
+        new.__intro_mel = (
+            None if self.__intro_mel is None else np.copy(self.__intro_mel)
+        )
+        new.__intro_onset_envelope = (
+            None
+            if self.__intro_onset_envelope is None
+            else np.copy(self.__intro_onset_envelope)
+        )
 
         new.__outro_tempo = self.__outro_tempo
-        new.__outro_chroma = None if self.__outro_chroma is None else np.copy(self.__outro_chroma)
-        new.__outro_energy = None if self.__outro_energy is None else np.copy(self.__outro_energy)
-        new.__outro_mel = None if self.__outro_mel is None else np.copy(self.__outro_mel)
-        new.__outro_onset_envelope = None if self.__outro_onset_envelope is None else np.copy(self.__outro_onset_envelope)
+        new.__outro_chroma = (
+            None if self.__outro_chroma is None else np.copy(self.__outro_chroma)
+        )
+        new.__outro_energy = (
+            None if self.__outro_energy is None else np.copy(self.__outro_energy)
+        )
+        new.__outro_mel = (
+            None if self.__outro_mel is None else np.copy(self.__outro_mel)
+        )
+        new.__outro_onset_envelope = (
+            None
+            if self.__outro_onset_envelope is None
+            else np.copy(self.__outro_onset_envelope)
+        )
 
         # Deep copy audio
         new.__y = None if self.__y is None else np.copy(self.__y)
@@ -99,7 +121,6 @@ class d_Song:
         new.__intro_sec = self.__intro_sec
 
         return new
-
 
     def get_sr(self):
         if self.__y is None or self.__sr is None:

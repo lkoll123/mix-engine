@@ -16,7 +16,7 @@ class mix_Engine:
         seams = []
         for i in range(len(playlist) - 1):
             entry_song = playlist[i]
-            outro_song = playlist[i+1]
+            outro_song = playlist[i + 1]
 
             # Make a clone of the OG song
             temp = outro_song.clone()
@@ -156,10 +156,9 @@ class mix_Engine:
         res["window_a"] = song_a_outro
         res["window_b"] = song_b_intro
         return res
-    
 
-    def blend_back(self, old_song, time_stamp, song, window = 2.0, transition_length = 5.0):
-        
+    def blend_back(self, old_song, time_stamp, song, window=2.0, transition_length=5.0):
+
         y = song.get_Y()
         sr = song.get_sr()
 
@@ -169,8 +168,8 @@ class mix_Engine:
         N = len(y)
         total_duration = N / sr
 
-        start_t = time_stamp+window
-        end_t = start_t+transition_length
+        start_t = time_stamp + window
+        end_t = start_t + transition_length
 
         if start_t >= total_duration:
             return
@@ -187,13 +186,15 @@ class mix_Engine:
             pad = np.zeros(len(y_rest) - len(y))
             y = np.concatenate([y, pad])
         elif len(y) > len(y_rest):
-            y = y[:len(y_rest)]
+            y = y[: len(y_rest)]
 
         # Fade the current and the old songs
         fade_len = end_i - start_i
         if fade_len > 0:
             alpha = np.linspace(0.0, 1.0, fade_len)
-            y[start_i:end_i] = (1 - alpha) * y[start_i:end_i] + alpha * y_rest[start_i:end_i]
+            y[start_i:end_i] = (1 - alpha) * y[start_i:end_i] + alpha * y_rest[
+                start_i:end_i
+            ]
             y[end_i:] = y_rest[end_i:]
         else:
             y[start_i:] = y_rest[start_i:]
