@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 import sys
 
@@ -10,9 +11,10 @@ TEST_DATA_DIR = os.path.join(PROJECT_ROOT, "tests", "test_data")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
+from mix_engine.dj_bridge import get_dj_mix_curves
 from mix_engine.engine import mix_Engine
 from mix_engine.songOrderEngine import song_Order_Engine
-from mix_engine.dj_bridge import get_dj_mix_curves
+from mix_engine.inference import run_mixer_for_playlist
 
 # -------------------------------
 # Build test playlist
@@ -36,50 +38,24 @@ test_data = [
     os.path.join(TEST_DATA_DIR, "BlocBoy JB _LOOK ALIVE_ ft_ Drake.wav"),
     os.path.join(TEST_DATA_DIR, "Calling My Spirit.wav"),
     os.path.join(TEST_DATA_DIR, "Change Lanes.wav"),
+    os.path.join(TEST_DATA_DIR, "I Kill People_ ft Tadoe _ Chief Keef _Produced by_ Ozmusiqe_ RR.wav"),
+    os.path.join(TEST_DATA_DIR, "Demons and Angels feat_ Juice WRLD.wav"),
+    os.path.join(TEST_DATA_DIR, "Meek Mill Ft_ Rick Ross - Ima Boss.wav"),
+    os.path.join(TEST_DATA_DIR, "Creeping _feat_ Rich The Kid_prod_ by Menoh Beats_.wav"),
+    os.path.join(TEST_DATA_DIR, "FEFE _Feat_ Nicki Minaj _ Murda Beatz_.wav"),
+    os.path.join(TEST_DATA_DIR, "KIKA ft Tory Lanez.wav"),
+    os.path.join(TEST_DATA_DIR, "MURDER ON MY MIND _Explicit_.wav"),
+    os.path.join(TEST_DATA_DIR, "KEKE _Ft_ Fetty Wap _ A Boogie wit da Hoodie_.wav"),
+    
 ]
+
+
 
 order_Eng = song_Order_Engine()
 mix_Eng = mix_Engine()
 
 def main():
-    # 1) Order playlist
-    song_Order, cost = order_Eng.solve_tsp(test_data)
-
-    print("Song Order:\n")
-    for song in song_Order["path"]:
-        print(song)
-    print(f"total cost: {cost}")
-
-    paths = song_Order["path"]
-    d_songs = song_Order["d_Song"]
-
-    seams = []
-
-    # 2) For each adjacent pair, get DJtransGAN curves and mix once
-    for i in range(len(paths) - 1):
-        prev_path = paths[i]
-        next_path = paths[i + 1]
-        prev_song = d_songs[i]
-        next_song = d_songs[i + 1]
-
-        print(f"\n=== Seam {i} ===")
-        print(f"Prev: {prev_path}")
-        print(f"Next: {next_path}")
-
-        dj_curves = get_dj_mix_curves(prev_path, next_path)
-        print(f"Got {len(dj_curves)} curve bands")
-
-        seam = mix_Eng.mix_songs(prev_song, next_song, dj_curves)
-        seams.append(seam)
-
-    # 3) Write seams to tests/output
-    out_dir = os.path.join(PROJECT_ROOT, "tests", "output")
-    os.makedirs(out_dir, exist_ok=True)
-
-    for i, seam_info in enumerate(seams):
-        out_path = os.path.join(out_dir, f"seam_{i:02d}.wav")
-        sf.write(out_path, seam_info["y_overlap"], seam_info["sr"])
-        print(f"  wrote: {out_path}")
+   run_mixer_for_playlist(test_data, os.path.join(PROJECT_ROOT, "tests", "output"))
 
 
 if __name__ == "__main__":

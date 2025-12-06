@@ -14,12 +14,12 @@ if not hasattr(np, "complex"):
 
 import os
 import sys
-import torch
-import librosa
 
-# =============================================================================
-# Point to the *external* DJtransGAN repo that you know works
-# =============================================================================
+import librosa
+import torch
+
+
+
 
 # mix-engine root: C:\Users\Wavefront\Documents\mix-engine
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -34,29 +34,35 @@ if DJTRANS_ROOT not in sys.path:
 
 # --- DJtransGAN imports (mirroring script/inference.py + process.py pieces) ---
 from djtransgan.config import settings
-from djtransgan.utils import (
-    download_pretrained,
-    check_exist,
-    time_to_str,
-    squeeze_dim,
-    get_filename,
-    load_pt,
-    load_audio,
-    out_audio,
-    normalize,
-)
-from djtransgan.model import get_generator
 from djtransgan.dataset import select_audio_region
-from djtransgan.process import (
-    sync_bpm,
-    sync_cue,
-    select_cue_points,
-    correct_cue,
-)
+from djtransgan.model import get_generator
+from djtransgan.process import (correct_cue, select_cue_points, sync_bpm,
+                                sync_cue)
+from djtransgan.utils import (check_exist, download_pretrained, get_filename,
+                              load_audio, load_pt, normalize, out_audio,
+                              squeeze_dim, time_to_str)
+from djtransgan.process import sync_cue
+
 # IMPORTANT: we *do not* import preprocess or estimate_beat from djtransgan.process
 
 # Cache the generator so we don't reload the checkpoint every time
 _generator = None
+
+
+def safe_sync_cue(prev_audio, next_audio, prev_cues, next_cues):
+    """
+    Wrap DJtransGAN's sync_cue to avoid hard crashes on degenerate cases
+    (e.g. division by zero in get_stretch_ratio). If sync_cue fails, we
+    just return the original next_audio/next_cues (no extra alignment).
+    """
+    try:
+        return sync_cue(prev_audio, next_audio, prev_cues, next_cues)
+    except ZeroDivisionError:
+        print(
+            "[dj_bridge] Warning: sync_cue failed with ZeroDivisionError; "
+            "falling back to unaligned next track."
+        )
+        return next_audio, next_cues
 
 
 def get_dj_generator(g_path=None, download_if_missing=True):
@@ -197,7 +203,7 @@ def _preprocess(prev_audio, next_audio, prev_cue, next_cue):
     print("[3/5] cue point select complete ...")
 
     print("[4/5] cue region alignment start ...")
-    next_audio, next_cues = sync_cue(prev_audio, next_audio, prev_cues, next_cues)
+    next_audio, next_cues = safe_sync_cue(prev_audio, next_audio, prev_cues, next_cues)
     print("[4/5] cue region alignment complete ...")
 
     print("[5/5] normalize start ...")

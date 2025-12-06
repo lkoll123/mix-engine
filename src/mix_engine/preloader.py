@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import librosa
 import numpy as np
 import soundfile as sf
