@@ -1,6 +1,6 @@
 # app.py
 
-import os
+import sys, os
 import shutil
 import subprocess
 import uuid
@@ -10,7 +10,15 @@ from typing import List, Optional
 import yt_dlp
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+BASE_DIR = Path(__file__).resolve().parent.parent  # project root: mix-engine/
+SRC_DIR = BASE_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from mix_engine.inference import run_mixer_for_playlist
 
 # ---------------------------
 # Create FastAPI app
@@ -36,6 +44,23 @@ BASE_DIR = Path(__file__).resolve().parent
 # songs/ folder next to app.py
 SONGS_DIR = BASE_DIR / "songs"
 SONGS_DIR.mkdir(parents=True, exist_ok=True)
+
+# mixes/ folder for mixer outputs
+MIXES_DIR = BASE_DIR / "mixes"
+MIXES_DIR.mkdir(parents=True, exist_ok=True)
+
+# Serve all files under BASE_DIR at /media so frontend can hit wavs directly
+app.mount("/media", StaticFiles(directory=str(BASE_DIR)), name="media")
+
+
+def to_media_url(path: Path) -> str:
+    """
+    Convert a filesystem path under BASE_DIR into a URL under /media.
+    Example:
+      BASE_DIR/mixes/<mix_id>/segment_00_*.wav -> /media/mixes/<mix_id>/segment_00_*.wav
+    """
+    rel = path.relative_to(BASE_DIR)
+    return "/media/" + str(rel).replace("\\", "/")
 
 
 # ---------------------------
@@ -115,7 +140,7 @@ def health():
 
 
 # ---------------------------
-# Main: /getPlaylist
+# Main: /getPlaylist (now: download + mix in one step)
 # ---------------------------
 
 
@@ -123,12 +148,15 @@ def health():
 def get_playlist(req: PlaylistRequest):
     """
     Accepts JSON: { "url": "<soundcloud playlist or track url>" }
-    Downloads each track via yt-dlp, converts to WAV, saves in ./songs,
-    and returns info about what happened.
+
+    Pipeline:
+      1) Download each track via yt-dlp into a temp folder.
+      2) Convert each to WAV under ./songs.
+      3) Run run_mixer_for_playlist(...) to create seams + segments.
+      4) Return URLs for all segments + metadata for frontend to play in order.
     """
     url = req.url.strip()
     if not url:
-        # HTTPException lets you send an HTTP error code + message
         raise HTTPException(status_code=400, detail="No URL provided")
 
     # temp folder for original downloads before .wav
@@ -219,14 +247,44 @@ def get_playlist(req: PlaylistRequest):
             },
         )
 
+    # ---------------------------
+    # Run full mixer on the downloaded WAVs
+    # ---------------------------
+
+    mix_id = uuid.uuid4().hex
+    out_dir = MIXES_DIR / mix_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        seam_files, seams_meta, segment_files, segment_meta = run_mixer_for_playlist(
+            files,
+            str(out_dir),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Mixing failed: {str(e)}")
+
+    # Map filesystem paths to URLs
+    playlist_file_urls = [to_media_url(Path(p)) for p in files]
+    seam_file_urls = [to_media_url(Path(p)) for p in seam_files]
+    segment_file_urls = [to_media_url(Path(p)) for p in segment_files]
+
     # success response
     return ApiResult(
         status=200,
         message="success",
         data={
+            "mix_id": mix_id,
             "processed": len(files),
             "skipped": skipped,
             "failures": failures,
-            "files": files,
+            "playlist_files": playlist_file_urls,  # original songs as wav
+            "seams": {
+                "files": seam_file_urls,
+                "meta": seams_meta,
+            },
+            "segments": {
+                "files": segment_file_urls,  # this is what you actually play in order
+                "meta": segment_meta,
+            },
         },
     )
