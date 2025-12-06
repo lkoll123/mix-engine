@@ -7,22 +7,39 @@ from typing import List, Tuple, Dict
 
 import numpy as np
 import soundfile as sf
+import librosa
 
 from mix_engine.dj_bridge import get_dj_mix_curves
 from mix_engine.engine import mix_Engine
 from mix_engine.songOrderEngine import song_Order_Engine
 
+from mix_engine.preloader import d_Song
+
 order_Eng = song_Order_Engine()
 mix_Eng = mix_Engine()
 
 
-def _get_audio(song) -> Tuple[np.ndarray, int]:
+def _get_audio(song):
     """
-    Helper to extract raw audio + sr from d_Song.
-    TODO: adjust if your d_Song uses different field names.
+    Normalize access to raw audio.
+
+    - If song is a d_Song, use its cached waveform + sr.
+    - If song is a path, load with librosa.
     """
-    y = song.y      # e.g. np.ndarray
-    sr = song.sr    # e.g. 44100
+    # Case 1: your d_Song wrapper
+    if isinstance(song, d_Song):
+        y = song.get_Y()
+        sr = song.get_sr()
+        if y is None or sr is None:
+            raise ValueError("d_Song has no loaded audio or sample rate")
+        return y, sr
+
+    # Case 2: raw numpy array (we don't expect this here)
+    if isinstance(song, np.ndarray):
+        raise ValueError("Need sample rate for raw numpy audio (got ndarray only)")
+
+    # Case 3: assume it's a path-like, load with librosa
+    y, sr = librosa.load(song, sr=None, mono=True)
     return y, sr
 
 
