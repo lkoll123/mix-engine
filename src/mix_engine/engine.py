@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 
 import librosa
@@ -21,7 +23,7 @@ class mix_Engine:
             # Make a clone of the OG song
             temp = outro_song.clone()
 
-            seam = self.mix_songs(entry_song, outro_song, curves)
+            seam = self.mix_songs(entry_song, outro_song, curves[i])
 
             # Revert song to original pitch and tempo
             self.blend_back(temp, seam["window_b"][1], outro_song)
@@ -62,7 +64,7 @@ class mix_Engine:
         res = {}
 
         song_b.set_tempo(tempo_ratio)
-        song_b.set_pitch(semitone_diff)
+        #song_b.set_pitch(semitone_diff)
 
         res["tempo_ratio"] = tempo_ratio
         res["semitone_diff"] = semitone_diff
